@@ -1,0 +1,260 @@
+<html lang="en">
+  <head>
+    <link rel="icon" href="data:;base64,iVBORw0KGgo=">
+  </head>
+  <body style="font-family:Roboto, sans-serif;">
+    <div style="float:left;width:30%;padding-top:20px;">
+      <a href="javascript:logingoogle();" style="font-size:18px;">Login via Google</a>
+      <br /><br /><br /><br />
+      <lable for="email">Email</lable> <input name="email" id="email" type="text" style="" onkeyup="if(event.keyCode==13){login();}" />
+      <br /><br />
+      <lable for="password">Password</lable> <input name="password" id="password" type="password" style="" onkeyup="if(event.keyCode==13){login();}" />
+      <br /><br />
+      <a href="javascript:login();" style="font-size:18px;">Login with email/password</a>
+      <br /><br />
+      <a href="javascript:loginemail();" style="font-size:18px;">Login passwordless with email</a>
+      <br /><br /><br /><br />
+      <lable for="phone">Phone</lable> <input name="phone" id="phone" type="text" style="" onkeyup="if(event.keyCode==13){loginphone();}" />
+      <br /><br />
+      <div id="loginphone_code" style="display:none;padding-left:10px;">
+        <lable for="code">Code</lable> <input name="code" id="code" type="text" style="" onkeyup="if(event.keyCode==13){loginphone_confirm();}" />
+        <br /><br />
+        <a href="javascript:loginphone_confirm();" style="font-size:18px;">Confirm code</a>
+        <br /><br />
+      </div>
+      <div id="recap_container" style="padding-bottom:10px;display:none;"></div>
+      <a href="javascript:loginphone();" style="font-size:18px;">Login passwordless with phone</a>
+      <br /><br /><br /><br />
+      <a href="javascript:logout();" style="font-size:18px;">Logout</a>
+      <br /><br />
+      <a href="javascript:forgotpassword()" style="font-size:18px;">Forgot password</a>
+      <br /><br />
+      <a href="javascript:register()" style="font-size:18px;">Register new user</a>
+      <br /><br /><br /><br />
+      <a href="javascript:callapi()" style="font-size:18px;">Call API (current user)</a>
+      <br /><br />
+      <lable for="token">ID Token</lable> <input name="token" id="token" type="text" style="" onkeyup="if(event.keyCode==13){callapi_withtoken(this.value);}" />
+      <br /><br />
+      <a href="javascript:callapi_withtoken(document.getElementById('token').value);" style="font-size:18px;">Call API with token</a>
+      <br /><br />
+    </div>
+    <div id="resultContent" style="float:left;width:70%;padding-top:20px;overflow-wrap: break-word;">
+      loading...
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/5.8.2/firebase.js"></script>
+    <script>
+      //auth preparation
+      const serverurl = 'http://localhost:3000';
+      const config = {
+        apiKey: "AIzaSyBMFKN3Uq-RknF4ynQHfmBFXQzcfcxCHf8",
+        authDomain: "mycrm-adviser-test.firebaseapp.com",
+      };
+      firebase.initializeApp(config);
+      firebase.auth().onAuthStateChanged( (user) => {
+        if (user) {
+          // User is signed in.
+          let displayName = user.displayName;
+          let email = user.email;
+          let emailVerified = user.emailVerified;
+          let photoURL = user.photoURL;
+          let isAnonymous = user.isAnonymous;
+          let uid = user.uid;
+          let providerData = user.providerData;
+          // ...
+          logmsg(JSON.stringify(user));
+        } else {
+          // User is signed out.
+          logmsg('please log in');
+        }
+      });
+
+      //google account
+      let logingoogle = () => {
+        logmsg('logging in...');
+        let provider = new firebase.auth.GoogleAuthProvider();
+        firebase.auth().signInWithRedirect(provider);
+      };
+
+      //email/password
+      let login = () => {
+        logmsg('logging in...');
+        let email = document.getElementById('email').value;
+        let password = document.getElementById('password').value;
+        if (!!firebase.auth().currentUser) {
+          logmsg('already logged in');
+          return;
+        }
+        firebase.auth().signInWithEmailAndPassword(email, password).catch( (err) => {
+          // Handle Errors
+          logerr(err);
+        });
+      };
+
+      //passwordless with email
+      let loginemail = () => {
+        logmsg('logging in...');
+        let email = document.getElementById('email').value;
+        let actionCodeSettings = {
+          // URL you want to redirect back to. The domain (www.example.com) for this
+          // URL must be whitelisted in the Firebase Console.
+          url: 'https://dev.nzfsg.co.nz',
+          // This must be true.
+          handleCodeInApp: true
+        };
+        firebase.auth().sendSignInLinkToEmail(email, actionCodeSettings)
+          .then( () => {
+            // The link was successfully sent. Inform the user.
+            // Save the email locally so you don't need to ask the user for it again
+            // if they open the link on the same device.
+            logmsg('Email sent, please follow instructions in email');
+            window.localStorage.setItem('passwordless_emailForSignIn', email);
+          })
+          .catch(function(err) {
+            // Handle Errors
+            logerr(err);
+          });
+      };
+      //user follow email link come back to page
+      if (firebase.auth().isSignInWithEmailLink(window.location.href)) {
+        // Additional state parameters can also be passed via URL.
+        // This can be used to continue the user's intended action before triggering
+        // the sign-in operation.
+        // Get the email if available. This should be available if the user completes
+        // the flow on the same device where they started it.
+        let email = window.localStorage.getItem('passwordless_emailForSignIn');
+        if (!email) {
+          // User opened the link on a different device. To prevent session fixation
+          // attacks, ask the user to provide the associated email again. For example:
+          email = window.prompt('Please provide your email for confirmation');
+        }
+        if (!email || email == '') {
+            logmsg('invalid email');
+        }
+        else {
+          logmsg('logging in...');
+          // The client SDK will parse the code from the link for you.
+          firebase.auth().signInWithEmailLink(email, window.location.href)
+            .then( (result) => {
+              // Clear email from storage.
+              window.localStorage.removeItem('passwordless_emailForSignIn');
+              window.location.href = '/';
+              // You can access the new user via result.user
+              // Additional user info profile not available via:
+              // result.additionalUserInfo.profile == null
+              // You can check if the user is new or existing:
+              // result.additionalUserInfo.isNewUser
+            })
+            .catch(function(err) {
+              // Some error occurred, you can inspect the code: error.code
+              // Common errors could be invalid email and invalid or expired OTPs.
+              logerr(err);
+            });
+        }
+      }
+
+      //passwordless with phone
+      let loginphone = () => {
+        logmsg('please confirm reCAPTCHA');
+        document.getElementById('recap_container').style.display = 'block';
+        window.recaptchaVerifier = new firebase.auth.RecaptchaVerifier('recap_container', {
+          'size': 'normal',
+          'callback': function(response) {
+            // reCAPTCHA solved, allow signInWithPhoneNumber.
+            loginphone_onrecap();
+          },
+          'expired-callback': function() {
+            logmsg('please enter recaptcha again');
+            grecaptcha.reset(window.recaptchaWidgetId);
+          }
+        });
+        window.recaptchaVerifier.render().then( (widgetId) => {
+          window.recaptchaWidgetId = widgetId;
+        });
+      };
+      let loginphone_onrecap = () => {
+        let phone = document.getElementById('phone').value;
+        let appVerifier = window.recaptchaVerifier;
+        firebase.auth().signInWithPhoneNumber(phone, appVerifier)
+          .then( (confirmationResult) => {
+            // SMS sent. Prompt user to type the code from the message, then sign the
+            // user in with confirmationResult.confirm(code).
+            window.confirmationResult = confirmationResult;
+            logmsg('SMS sent, please enter code to log in - '+JSON.stringify(confirmationResult));
+            document.getElementById('recap_container').style.display = 'none';
+            document.getElementById('loginphone_code').style.display = 'block';
+          }).catch(function (err) {
+            // Handle Errors
+            logerr(err);
+            grecaptcha.reset(window.recaptchaWidgetId);
+          });
+      };
+      let loginphone_confirm = () => {
+        logmsg('logging in...');
+        document.getElementById('loginphone_code').style.display = 'none';
+        let code = document.getElementById('code').value;
+        window.confirmationResult.confirm(code);
+      };
+
+      //other actions
+      let logout = () => {
+        if (!firebase.auth().currentUser) {
+          logmsg('already logged out');
+          return;
+        }
+        logmsg('logging out...');
+        if (firebase.auth().currentUser) {
+          firebase.auth().signOut();
+        }
+      };
+      let forgotpassword = () => {
+        let email = document.getElementById('email').value;
+        firebase.auth().sendPasswordResetEmail(email).then( () => {
+          logmsg('reset password email sent');
+        }).catch(function(err) {
+          // Handle Errors
+          logerr(err);
+        });
+      }
+
+      //call api
+      let callapi = () => {
+        if (!firebase.auth().currentUser) {
+          logmsg('please log in first');
+          return;
+        }
+        logmsg('calling api...');
+        firebase.auth().currentUser.getIdToken().then( (idToken) => {
+          // Send token to your backend via HTTPS
+          callapi_withtoken(idToken)
+        }).catch( (err) => {
+          // Handle Errors
+          logerr(err);
+        });
+      };
+      let callapi_withtoken = (idToken) => {
+        logmsg('calling api...');
+        let xhr = new XMLHttpRequest();
+        xhr.open('GET', serverurl, true);
+        xhr.setRequestHeader('Authorization', idToken);
+        xhr.onreadystatechange = function () {
+          if(xhr.readyState === 4 && xhr.status === 200) {
+            logmsg('API response: ' + xhr.responseText);
+          }
+          else if(xhr.readyState === 4) {
+            logmsg('API error: ' + xhr.statusText + '. ' + xhr.responseText);
+          }
+        };
+        xhr.send();
+      };
+
+      //log error or messages
+      let logerr = (err, additionalmsg) => {
+          document.getElementById('resultContent').innerHTML = 'Error '+err.code+' '+err.message+' Stack: '+err.stack+(additionalmsg?'<br /><br />'+additionalmsg:'');
+      };
+      let logmsg = (msg) => {
+          document.getElementById('resultContent').innerHTML = msg;
+      };
+    </script>
+  </body>
+</html>

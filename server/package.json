@@ -1,0 +1,18 @@
+{
+  "name": "cicp-server",
+  "version": "1.0.0",
+  "description": "nodejs server for google cicp id token check",
+  "main": "app.js",
+  "dependencies": {
+    "express": "^4.16.4",
+    "firebase-admin": "^7.0.0"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node app.js"
+  },
+  "author": "Tran Zha",
+  "license": "ISC",
+  "bin": "app.js"
+}
