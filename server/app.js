@@ -2,7 +2,7 @@ const port = 3000;
 const express = require('express');
 const app = express();
 const firebaseAdmin = require('firebase-admin');
-const serviceAccount = require('./firebase-admin-service-account.json');
+const serviceAccount = require('./firebase-admin-service-account.json'); //key deleted, need to regenerate
 //initialise firebase adimn service account
 firebaseAdmin.initializeApp({
   credential: firebaseAdmin.credential.cert(serviceAccount),

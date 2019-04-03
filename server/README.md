@@ -9,3 +9,6 @@ To be changed using AWS lambda
 npm install  
 npm start  
 - server will be running on http://{host}:3000
+
+#FIREBASE KEY DELETED, NEED TO REGENERATE#
+https://console.firebase.google.com/u/0/project/mycrm-adviser-test/settings/serviceaccounts/adminsdk
